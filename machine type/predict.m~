@@ -1,0 +1,81 @@
+function predict(timeseries)
+% Predict the rotation speed at every point in the time series
+    toolNums = 1;
+     toolCuts = loadCuts()
+
+end
+
+
+
+function predictAudio(timeseries)
+    % Predict the rotation speed DWT peak audio frequency
+
+
+
+
+end
+
+
+
+function predictFourier(timeseries)
+    % Predict the rotation speed from the peak fourier amplitude
+    fr 
+    
+
+end
+
+
+function rpm = getRotationSpeed(tool)
+    % Return the true rotation speed from the tool number
+    map = containers.Map();
+    map(1) = 3000;
+    map(2) = 3000;
+    map(3) = 1500;
+    map(4) = 1500;
+    map(5) = 1500;
+    map(6) = 1500;
+    map(7) = 1500;
+    map(8) = 3000;
+    map(9) = 3000;
+    map(10) = 3000;
+    map(11) = 3000;
+    map(12) = 3000;
+    map(13) = 3000;
+    map(14) = 3000;
+    map(15) = 3000;
+    map(16) = 3000;
+    map(17) = 3000;
+    map(18) = 3000;
+    map(19) = 3000;
+    rpm = map(tool);
+end
+
+
+
+
+function toolCuts = loadCuts(toolNums)
+% Load all of the cuts from the data directory    
+    
+% Cache tool objects
+    for tool=toolNums
+        cache = sprintf('cache/tool_%i.mat',tool);
+        if ~exist(cache, 'file')
+            data = ToolCondition(tool);
+            save(cache,'data');
+        end
+    end
+    
+    % Load tool object
+    parfor i=1:length(toolNums)
+        cache = sprintf('cache/tool_%i.mat',toolNums(i));
+        fprintf('Loading tool %i data from cache\n',toolNums(i));
+        cached = load(cache);
+        toolCuts = [toolCuts cached.data.ToolCuts];
+    end  
+    
+    % Filter out the air cutting
+    originalCount = length(toolCuts);
+    toolCuts = filterOut(toolCuts,'expectedOperation',1);
+    newCount = originalCount-length(toolCuts);
+    fprintf('Filtered out %i/%i air cuts\n',newCount,originalCount)
+end
