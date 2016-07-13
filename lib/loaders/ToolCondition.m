@@ -117,23 +117,11 @@ classdef ToolCondition < ToolDataset
             f3 = [];
             f4 = [];
             f5 = [];
-            
-            % Find the largest frequency vector
-            nfourier = 0;
-             for i=1:length(toolcuts)
-                npoints = length(toolcuts(i).vibrationTimeSeries);
-                nfourier = max(nfourier,npoints);
-            end
-            
+
             % Find the number of frequency points
-            m = 0;
-            for i=1:length(toolcuts)
-                toolcuts(i).calculateVibrationDFT(nfourier)
-                m = length(toolcuts(i).fourier.freq);
-                break;
-            end
-            
-              
+            toolcuts(1).calculateVibrationDFT()
+            m = length(toolcuts(1).fourier.freq);
+   
             figure; hold on;
             n = length(toolcuts);
             x = zeros(n,m);
@@ -142,15 +130,13 @@ classdef ToolCondition < ToolDataset
              
             for i=1:length(toolcuts)
                 cut = toolcuts(i);
-                cut.calculateVibrationDFT(nfourier);       
+                cut.calculateVibrationDFT();       
                 freq = cut.fourier.freq(k,:);
                 power = cut.fourier.power(k,:);
 
                 j = j+1;
                 x(j,:) = freq;
-                %y(j,:) = smooth(sqrt(power),'lowess');
                 y(j,:) = sqrt(power);
-
 
                 % Define the current power spectrum
                 yj = y(j,:);
@@ -209,15 +195,10 @@ classdef ToolCondition < ToolDataset
             
             operation = 1; % Cutting operation type   
             toolcuts = filterBy(self.ToolCuts,'actualOperation',operation);
-            
-            % Find the largest frequency vector
-            npoints = 0;
-            for cut=toolcuts
-                npoints = max(npoints,length(cut.audioTimeSeries));
-            end
-            
+                  
             % Update one of the cuts so we can observe the number of points
-            cut.calculateAudioDFT(npoints);
+            cut = toolcuts(1);
+            cut.calculateAudioDFT();
             
             m = length(cut.audioFourier.freq);
             n = length(toolcuts);
@@ -227,7 +208,7 @@ classdef ToolCondition < ToolDataset
             figure; hold on;
             for i=1:length(toolcuts)
                 cut = toolcuts(i);
-                cut.calculateAudioDFT(npoints);
+                cut.calculateAudioDFT();
                 x(i,:) = cut.audioFourier.freq;
                 y(i,:) = smooth(sqrt(cut.audioFourier.power),'lowess');
 
@@ -251,7 +232,7 @@ classdef ToolCondition < ToolDataset
                 f5(end+1) = mean(yi./yb)-1;
 
                 color = [i/n,(n-i)/n,0];
-                plot(xi,yi,'Color',color); 
+                plot(xi, yi./yb, 'Color',color); 
                 title(sprintf('Drift in Audio Frequency Content (%i)',cut.actualOperation));
                 xlabel('Frequency [Hz]')
                 ylabel('Amplitude')

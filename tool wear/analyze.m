@@ -16,9 +16,6 @@ function analyze(tool)
         save(cache,'data');
     end
     
-    figure('units','normalized','outerposition',[0 0 1 1])
-    n = length(data.ToolCuts);
-
     % STEP 1: Print the time series
     %data = ToolCondition(tool);
     %data.plotVibrationTimeSeries();
@@ -26,12 +23,12 @@ function analyze(tool)
     drawnow();
     
     % STEP 2: Plot the cut classification
-    data.plotCutActionClassification()
+    %data.plotCutActionClassification()
     drawnow();
 
     % STEP 3: Print the vibration frequency evolution
     data.plotFrequencyEvolution()
-    drawnow();
+    %drawnow();
 
     % STEP 4: Print the audio frequency evolution
     data.plotAudioFrequencyEvolution()

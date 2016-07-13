@@ -8,21 +8,7 @@ function features = featurize(toolnums,operation)
         
         % Filter by operation
         cuts = filterBy(cuts,'actualOperation',operation);
-        
-        % Extract the maximum size of Fourier transform
-        maxvpoints = 0;
-        maxapoints = 0;
-        for cut=cuts
-            maxvpoints = max(maxvpoints, length(cut.vibrationTimeSeries));
-            maxapoints = max(maxapoints, length(cut.audioTimeSeries));
-        end
-        
-        % Recalculate all of the Fourier transforms so that the lengths are equal
-        for cut=cuts
-            cut.calculateVibrationDFT()  
-            cut.calculateAudioDFT(maxapoints)  
-        end
-        
+
         % Extract the base Fourier vectors
         c1 = cuts(1);
         c2 = cuts(2);
@@ -61,18 +47,13 @@ function features = featurizeCut(cut1,cut2,cut3,cuts)
     % @param{Table} Features. A table of features as described above
     
     k = 4; % Direction
-    y1 = sqrt(cut1.fourier.power(k,:));
-    y2 = sqrt(cut2.fourier.power(k,:));
-    y3 = sqrt(cut3.fourier.power(k,:));
+    y1 = cut1.fourier.power(k,:);
+    y2 = cut2.fourier.power(k,:);
+    y3 = cut3.fourier.power(k,:);
        
-    a1 = sqrt(cut1.audioFourier.power);
-    a2 = sqrt(cut2.audioFourier.power);
-    a3 = sqrt(cut3.audioFourier.power);
-    
-    % Smoothing
-    %y1 = normSmooth(y1,2);
-    %y2 = normSmooth(y2,2);
-   % y3 = normSmooth(y3,2);
+    a1 = cut1.audioFourier.power;
+    a2 = cut2.audioFourier.power;
+    a3 = cut3.audioFourier.power;
     
     % Calculating the base spectrum
     yb = mean(vertcat(y1,y2,y3));
@@ -86,23 +67,21 @@ function features = featurizeCut(cut1,cut2,cut3,cuts)
         
         % Calculate the spectrum for comparison
         fi = cuti.fourier.freq(1,:);
-        yi = sqrt(cuti.fourier.power(k,:));
-        ai = sqrt(cuti.audioFourier.power);
-        rowi = table();%array2table(downsample(yi-yb,500));
-        
-       % yi = normSmooth(yi,2);
-        
+        yi = cuti.fourier.power(k,:);
+        ai = cuti.audioFourier.power;
+        rowi = table();
+
         % Calculate the vibration features
-        %rowi.coefficients = sum(yi-yb) / sum(yb);
-        rowi.power        = sum(yi.^2-yb.^2) / 10^7;
-        %rowi.intensity    = sum(log(yi)-log(yb)) / sum(log(yb));
-        rowi.frechet      = max(yi-yb) / max(yb);
+        rowi.coefficients = sum(sqrt(yi) - sqrt(yb)) / sum(sqrt(yb));
+        rowi.power        = sum(yi-yb) / sum(yb);
+        rowi.intensity    = sum(log(yi)-log(yb)) / sum(log(yb));
+        rowi.frechet      = max(yi-yb);
         rowi.relative     = mean(yi./yb);
         
         % Calculate the vibration features
-        rowi.acoefficients = sum(ai-ab) / sum(ab);
-        rowi.apower        = sum(ai.^2-ab.^2) / sum(ab.^2);
-        %rowi.aintensity    = sum(log(ai)-log(ab)) / sum(log(ab));
+        rowi.acoefficients = sum(sqrt(ai) - sqrt(ab)) / sum(sqrt(ab));
+        rowi.apower        = sum(ai-ab) / sum(ab);
+        rowi.aintensity    = sum(log(ai)-log(ab)) / sum(log(ab));
         rowi.afrechet      = max(ai-ab) / mean(ab);
         rowi.arelative     = mean(ai./ab);
         
@@ -119,13 +98,12 @@ function features = featurizeCut(cut1,cut2,cut3,cuts)
         
         lpi = yi(fi<100);
         lpb = yb(fi<100);
-        rowi.lowPower = sum(lpi.^2-lpb.^2) / sum(lpb.^2);
+        %rowi.lowPower = sum(lpi.^2-lpb.^2); %/ sum(lpb.^2);
         
         lpi = yi(40 < fi & fi < 60);
         lpb = yb(40 < fi & fi < 60);
         %rowi.fiPower = sum(lpi.^2-lpb.^2) / sum(lpb.^2);
-        
-        
+               
         mpi = yi(100 < fi & fi < 300);
         mpb = yb(100 < fi & fi < 300);
         %rowi.medPower = sum(mpi.^2-mpb.^2) / sum(mpb.^2);

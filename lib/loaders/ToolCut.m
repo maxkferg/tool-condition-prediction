@@ -115,17 +115,11 @@ classdef ToolCut < handle
         % Calculate the DFT for vibration
         % Welch's Method is used to reduce variance in the spectra
         % The frequency domain is discretized into [0,500] Hz frequency intervals
-        function calculateVibrationDFT(self,n)       
-            ndirections = 4;
+        function calculateVibrationDFT(self)       
             minfreq = 4; %Hz
-            maxfreq = round(self.vibrationSampleRate/2); %Hz
-            nyquist = round(self.vibrationSampleRate/2); %Hz
+            ndirections = 4;
             timeSeries = self.vibrationTimeSeries;
             
-            if (nargin>1)
-                timeSeries = zeroPad(timeSeries,n);
-            end
-                
             % Precalculate frequencies to allocate
             n = 1024;
             npoints = n/2+1;
@@ -148,19 +142,13 @@ classdef ToolCut < handle
 
                 % Perform fft transform
                 [energy,freq] = pwelch(accel,hanning(n),[],[],self.vibrationSampleRate);
-                %energy = abs(amplitude(1:floor(n/2))).^2;
                 
                 % Discard the low frequency values
-                energy(freq<4) = mean(energy(freq>4));
+                energy(freq<minfreq) = mean(energy(freq>minfreq));
                 
                 % Compute the power by dividing the energy by the total unpadded duration
                 power = scaleFactor*energy; % Watts
                 
-                % Truncate the ununsed data. The intuitive this would be to
-                % Set the power to 0, but this would cause the log power
-                % spectrum to contain -Inf at those points
-                %power(frequencies<minfreq) = mean(power);
-    
                 self.fourier.freq(i,:) = freq;
                 self.fourier.power(i,:) = power;
             end
@@ -170,36 +158,34 @@ classdef ToolCut < handle
         
         % Calculate the DFT for vibration
         % If n is specified then the time series will be zero padded to n points
-        function calculateAudioDFT(self,n)       
+        function calculateAudioDFT(self)       
+            % Precalculate frequencies to allocate
+            n = 2048;
             minfreq = 10; %Hz
-            maxfreq = round(self.audioSampleRate/2); %Hz
-            nyquist = round(self.audioSampleRate/2); %Hz
-            timeSeries = self.audioTimeSeries;
-            
-            if (nargin>1)
-                timeSeries = zeroPad(timeSeries,n);
-            end
             
             % Precalculate frequencies to allocate
-            n = length(timeSeries);
-            frequencies = (1:n/2)'/(n/2)*nyquist;
-            keep = find(frequencies<maxfreq);
+            audio = self.audioTimeSeries;
 
-            % Perform fft transform
-            amplitude = fft(timeSeries);
-            energy = abs(amplitude(1:floor(n/2))).^2;
-
-            % Compute the power by dividing the energy by the total unpadded duration
-            time = length(self.audioTimeSeries)/self.audioSampleRate; % seconds
-            power = energy/time; % Watts
+            % Pad the signal with zeros and scale appropriately
+            originalLength = length(audio);
+            audio = zeroPad(audio,n);
+            scaleFactor = length(audio)/originalLength;
             
-            % Truncate the ununsed data. The intuitive this would be to
-            % Set the power to 0, but this would cause the log power
-            % spectrum to contain -Inf at those points
-            power(frequencies<minfreq) = mean(power);
+            % Perform fft transform
+            [energy,freq] = pwelch(audio,hanning(n),[],[],self.audioSampleRate);
 
-            self.audioFourier.freq = frequencies(keep);
-            self.audioFourier.power = power(keep);
+            % Discard the low frequency values
+            energy(freq<minfreq) = mean(energy(freq>minfreq));
+
+             % Compute the power by dividing the energy by the total unpadded duration
+            power = scaleFactor*energy; % Watts
+            
+            % Compute the power by dividing the energy by the total unpadded duration
+            %time = length(self.audioTimeSeries)/self.audioSampleRate; % seconds
+            %power = energy/time; % Watts
+           
+            self.audioFourier.freq = freq;
+            self.audioFourier.power = power;
         end
     end
 end

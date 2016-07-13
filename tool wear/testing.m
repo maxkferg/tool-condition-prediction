@@ -6,12 +6,12 @@ end
 function plotFeaturesForTool(tool)
 
     % Plot features against wear
-    operation = 2;
+    operation = 1;
     figure(); hold on;
     features = featurize(tool,operation);
     plot(1-features.condition, features.coefficients);
     plot(1-features.condition, features.power);
-    %plot(1-features.condition, 5*features.intensity);
+    plot(1-features.condition, 5*features.intensity);
     plot(1-features.condition, features.frechet);
     plot(1-features.condition, features.relative);
     plot(1-features.condition, 5-5*features.kurtosis);

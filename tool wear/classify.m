@@ -7,70 +7,63 @@ function classify(filename)
     
     % Make the results reproducible
     %rng(42);
-    operation = 2; % Only train and test for operation 1
-    %training = [17,18,19,21,22,23];
-    %testing = [21];
-    training = [17,18,19,20,21,22];
-    testing = [23];
+    operation = 1; % Only train and test for operation 1;
+    possibilities = [17,18,19,20,21,22,23];
     
-    % Featurize the training and testing data
-    trainingFeatures = featurize(training,operation);
-    testingFeatures = featurize(testing,operation);
-    
-    % Load the model from file, or train a new one
-    if nargin>0
-        fprintf('Loading PMML model from %s\n',filename);
-        model = pmml.GaussianProcess(filename);
-    else
-        filename = 'data/cache/simple.pmml';
-        model = train(trainingFeatures,filename);
+    for i=1:length(possibilities)
+        testing = [23];
+        training = setdiff(possibilities,testing);
+
+        % Featurize the training and testing data
+        trainingFeatures = featurize(training,operation);
+        testingFeatures = featurize(testing,operation);
+
+        % Load the model from file, or train a new one
+        if nargin>0
+            fprintf('Loading PMML model from %s\n',filename);
+            model = pmml.GaussianProcess(filename);
+        else
+            filename = 'data/cache/simple.pmml';
+            model = train(trainingFeatures,filename);
+        end
+
+        % Resubstitution to see how weel the method works on the training set
+        XT = trainingFeatures;
+        XT.condition = [];
+        XT.toolNum = [];
+        XT.partNum = [];
+        XT = table2array(XT);
+
+        % Classify the test cuts using the model
+        [resubCond,resubVar] = model.score(XT);
+
+        % Strip unused features from feature matrix
+        X = testingFeatures;
+        X.condition = [];
+        X.toolNum = [];
+        X.partNum = [];
+        X = table2array(X);
+
+        % Classify the test cuts using the model
+        [predictedCond,predictedVar] = model.score(X);
+
+        % Calculate the RMSE on training
+        RMSE = rms(trainingFeatures.condition - resubCond);
+        fprintf('The RMSE on training: %.3f\n',RMSE)
+
+        % Calculate the RMSE on testing
+        RMSE = rms(testingFeatures.condition - predictedCond);
+        fprintf('The RMSE on testing: %.3f\n',RMSE)
+
+        % Plot the cross-validated predictions over the course of the experiment
+        plotPredictedTimeSeries(trainingFeatures,resubCond,resubVar);
+
+        % Plot the predictions over the course of the experiment
+        plotPredictedTimeSeries(testingFeatures,predictedCond,predictedVar);
+
+        % Plot the actual labels against the predictions
+        plotPredictionVsLabel(testingFeatures,predictedCond,predictedVar);
     end
-  
-    % Plot all of the time series predictions
-%     for i=toolnums
-%         plotTimeSeriesToolCondition(model,i)
-%         title(sprintf('Tool %i Condition Time Series',i))
-%         drawnow();
-%     end
-    
-
-    % Resubstitution to see how weel the method works on the training set
-    XT = trainingFeatures;
-    XT.condition = [];
-    XT.toolNum = [];
-    XT.partNum = [];
-    XT = table2array(XT);
-
-    % Classify the test cuts using the model
-    [resubCond,resubVar] = model.score(XT);
-
-    % Strip unused features from feature matrix
-    X = testingFeatures;
-    X.condition = [];
-    X.toolNum = [];
-    X.partNum = [];
-    X = table2array(X);
-
-    % Classify the test cuts using the model
-    [predictedCond,predictedVar] = model.score(X);
-    
-    % Calculate the RMSE on training
-    RMSE = rms(trainingFeatures.condition - resubCond);
-    fprintf('The RMSE on training: %.3f\n',RMSE)
-    
-    % Calculate the RMSE on testing
-    RMSE = rms(testingFeatures.condition - predictedCond);
-    fprintf('The RMSE on testing: %.3f\n',RMSE)
-      
-    % Plot the cross-validated predictions over the course of the experiment
-    plotPredictedTimeSeries(trainingFeatures,resubCond,resubVar);
-       
-    % Plot the predictions over the course of the experiment
-    plotPredictedTimeSeries(testingFeatures,predictedCond,predictedVar);
-       
-    % Plot the actual labels against the predictions
-    plotPredictionVsLabel(testingFeatures,predictedCond,predictedVar);
-    
 end
 
 
