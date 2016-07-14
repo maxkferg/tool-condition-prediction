@@ -23,7 +23,7 @@ function analyze(tool)
     drawnow();
     
     % STEP 2: Plot the cut classification
-    %data.plotCutActionClassification()
+    data.plotCutActionClassification()
     drawnow();
 
     % STEP 3: Print the vibration frequency evolution

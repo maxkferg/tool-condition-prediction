@@ -1,21 +1,24 @@
-function features = featurize(toolnums,operation)
+function features = featurize(toolnums)
 % Featurize all toolnums and return a table of features.
 % Only include cuts that match operation
 % Featurizes each tool individually, to keep the base Fourier vectors
+    features = {};
     for i=1:length(toolnums)
         % Load all cuts for this tool
         cuts = loadCuts(toolnums(i));
         
         % Filter by operation
-        cuts = filterBy(cuts,'actualOperation',operation);
+        cuts = filterOut(cuts,'actualOperation',0);
+        %cuts = filterBy(cuts,'actualOperation',1);
 
         % Extract the base Fourier vectors
         c1 = cuts(1);
         c2 = cuts(2);
         c3 = cuts(3);
+        c4 = cuts(4);
         
         % Featurize all of the training/testing points
-        features{i} = featurizeCut(c1,c2,c3,cuts);
+        features{end+1} = featurizeCut(c1,c2,c3,c4,cuts);
     end
     features = vertcat(features{:});
 end
@@ -23,7 +26,7 @@ end
 
 
 
-function features = featurizeCut(cut1,cut2,cut3,cuts)
+function features = featurizeCut(cut1,cut2,cut3,cut4,cuts)
     % Featurize the cut.
     % Return a table of features derived from the audio and vibration of
     % the cut. 
@@ -50,14 +53,16 @@ function features = featurizeCut(cut1,cut2,cut3,cuts)
     y1 = cut1.fourier.power(k,:);
     y2 = cut2.fourier.power(k,:);
     y3 = cut3.fourier.power(k,:);
-       
+    y4 = cut4.fourier.power(k,:);
+        
     a1 = cut1.audioFourier.power;
     a2 = cut2.audioFourier.power;
     a3 = cut3.audioFourier.power;
+    a4 = cut4.audioFourier.power;
     
     % Calculating the base spectrum
-    yb = mean(vertcat(y1,y2,y3));
-    ab = mean(vertcat(a1,a2,a3));
+    yb = mean(vertcat(y1,y2,y3,y4));
+    ab = mean(vertcat(a1,a2,a3,a4));
      
     % Start a features table
     features = table();
@@ -70,7 +75,7 @@ function features = featurizeCut(cut1,cut2,cut3,cuts)
         yi = cuti.fourier.power(k,:);
         ai = cuti.audioFourier.power;
         rowi = table();
-
+        
         % Calculate the vibration features
         rowi.coefficients = sum(sqrt(yi) - sqrt(yb)) / sum(sqrt(yb));
         rowi.power        = sum(yi-yb) / sum(yb);
@@ -84,6 +89,10 @@ function features = featurizeCut(cut1,cut2,cut3,cuts)
         rowi.aintensity    = sum(log(ai)-log(ab)) / sum(log(ab));
         rowi.afrechet      = max(ai-ab) / mean(ab);
         rowi.arelative     = mean(ai./ab);
+        
+        % Operation
+        rowi.operation = cuti.actualOperation;
+        rowi.powerOperation = (rowi.operation==1) * rowi.power;
         
         % Add the independant variable
         rowi.condition = 1-cuti.toolwear;

@@ -32,7 +32,7 @@ function plotFeature()
     for i=1:length(tools)
         features = featurize(tools(i),operation);
         x = 100-100*features.condition;
-        y = features.power;
+        y = features.frechet;
         plot(x,y,'-x');
         legends{i} = sprintf('Tool %i',i);
     end

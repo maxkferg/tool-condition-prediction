@@ -7,16 +7,15 @@ function classify(filename)
     
     % Make the results reproducible
     %rng(42);
-    operation = 1; % Only train and test for operation 1;
-    possibilities = [17,18,19,20,21,22,23];
+    possibilities = [25,26];
     
-    for i=1:length(possibilities)
-        testing = [23];
+    for i=1
+        testing = possibilities(i);
         training = setdiff(possibilities,testing);
 
         % Featurize the training and testing data
-        trainingFeatures = featurize(training,operation);
-        testingFeatures = featurize(testing,operation);
+        trainingFeatures = featurize(training);
+        testingFeatures = featurize(testing);
 
         % Load the model from file, or train a new one
         if nargin>0
@@ -47,6 +46,11 @@ function classify(filename)
         % Classify the test cuts using the model
         [predictedCond,predictedVar] = model.score(X);
 
+        % Apply a two point moving average
+        B = 1/2*ones(2,1);
+        predictedCond = filter(B,1,predictedCond);
+        predictedVar = filter(B,1,predictedVar);
+        
         % Calculate the RMSE on training
         RMSE = rms(trainingFeatures.condition - resubCond);
         fprintf('The RMSE on training: %.3f\n',RMSE)

@@ -1,0 +1,1 @@
+I added the extra case that I forgot to account for. I haven't tested it yet. The way to test that case is to initialize the partmap with a change in depth at the last column of the matrix.
