@@ -7,66 +7,71 @@ function classify(filename)
     
     % Make the results reproducible
     %rng(42);
-    possibilities = [25,26];
+    possibilities = [11,17,18,19,21,22,23,25,26];
     
-    for i=1
+    for i=3:5%length(possibilities)
+        % Select testing and training set
         testing = possibilities(i);
         training = setdiff(possibilities,testing);
+        fprintf('Testing against tool %i\n',testing);
+        
+        % Featurize the training and testing data [operation 1]
+        trainingFeatures1 = featurize(training,1);
+        testingFeatures1 = featurize(testing,1);
+        model1 = train(trainingFeatures1,filename);
 
-        % Featurize the training and testing data
-        trainingFeatures = featurize(training);
-        testingFeatures = featurize(testing);
+        % Featurize the training and testing data [operation 2]
+        trainingFeatures2 = featurize(training,2);
+        testingFeatures2 = featurize(testing,2);
+        model2 = train(trainingFeatures2,filename);
 
-        % Load the model from file, or train a new one
-        if nargin>0
-            fprintf('Loading PMML model from %s\n',filename);
-            model = pmml.GaussianProcess(filename);
-        else
-            filename = 'data/cache/simple.pmml';
-            model = train(trainingFeatures,filename);
-        end
-
-        % Resubstitution to see how weel the method works on the training set
-        XT = trainingFeatures;
-        XT.condition = [];
-        XT.toolNum = [];
-        XT.partNum = [];
-        XT = table2array(XT);
+        
+        % Resubstitution to see how well the method works on the training set
+        XT1 = trainingFeatures1;   XT2 = trainingFeatures2;
+        XT1.condition = [];        XT2.condition = [];
+        XT1.toolNum = [];          XT2.toolNum = [];
+        XT1.partNum = [];          XT2.partNum = [];
+        XT1 = table2array(XT2);    XT2 = table2array(XT2);
 
         % Classify the test cuts using the model
-        [resubCond,resubVar] = model.score(XT);
+        [resubCond1,resubVar1] = model1.score(XT1);
+        [resubCond2,resubVar2] = model2.score(XT2);
 
         % Strip unused features from feature matrix
-        X = testingFeatures;
-        X.condition = [];
-        X.toolNum = [];
-        X.partNum = [];
-        X = table2array(X);
-
+        X1 = testingFeatures1;    X2 = testingFeatures2;
+        X1.condition = [];        X2.condition = [];    
+        X1.toolNum = [];          X2.toolNum = [];
+        X1.partNum = [];          X2.partNum = [];
+        X1 = table2array(X1);     X2 = table2array(X2);
+ 
         % Classify the test cuts using the model
-        [predictedCond,predictedVar] = model.score(X);
-
-        % Apply a two point moving average
-        B = 1/2*ones(2,1);
-        predictedCond = filter(B,1,predictedCond);
-        predictedVar = filter(B,1,predictedVar);
+        [predictedCond1,predictedVar1] = model1.score(X1);
+        [predictedCond2,predictedVar2] = model2.score(X2);
+        %predictedCond = 0.5*([1; predictedCond] + [predictedCond; 0.5]);
+        %predictedCond = predictedCond(1:end-1);
         
         % Calculate the RMSE on training
-        RMSE = rms(trainingFeatures.condition - resubCond);
-        fprintf('The RMSE on training: %.3f\n',RMSE)
+        %RMSE = rms(trainingFeatures.condition - resubCond);
+        %fprintf('The RMSE on training: %.3f\n',RMSE)
 
         % Calculate the RMSE on testing
-        RMSE = rms(testingFeatures.condition - predictedCond);
-        fprintf('The RMSE on testing: %.3f\n',RMSE)
+        %RMSE = rms(testingFeatures.condition - predictedCond);
+        %fprintf('The RMSE on testing: %.3f\n',RMSE)
 
         % Plot the cross-validated predictions over the course of the experiment
-        plotPredictedTimeSeries(trainingFeatures,resubCond,resubVar);
+        %plotPredictedTimeSeries(trainingFeatures,resubCond,resubVar);
+        %title(sprintf('Time Series Training for Tool %i',testing))
 
         % Plot the predictions over the course of the experiment
-        plotPredictedTimeSeries(testingFeatures,predictedCond,predictedVar);
+        %plotPredictedTimeSeries(testingFeatures,predictedCond,predictedVar);
+        %title(sprintf('Time Series Prediction for Tool %i',testing))
 
         % Plot the actual labels against the predictions
-        plotPredictionVsLabel(testingFeatures,predictedCond,predictedVar);
+        figure; hold on;
+        plotPredictionVsLabel(testingFeatures1,predictedCond1,predictedVar1,'rx');
+        plotPredictionVsLabel(testingFeatures2,predictedCond2,predictedVar2,'bx');
+        title(sprintf('Prediction vs Label for Tool %i',testing))
+        drawnow()
     end
 end
 
@@ -85,8 +90,8 @@ function plotPredictedTimeSeries(testingFeatures,predictedLabels,predictedVar)
     
     % Plot the predicted tool condition against time
     plot(time,predictedCondition,'--r','lineWidth',2);
-    plot_variance(time,(predictedCondition-1.65*predictedSD)',(predictedCondition+1.65*predictedSD)','r');
-    alpha(0.2);
+    plot_variance(time,(predictedCondition-predictedSD)',(predictedCondition+predictedSD)','r');
+    alpha(0.2)
     
     % Plot the actual wear against time
     condition = 100*testingFeatures.condition;
@@ -99,14 +104,13 @@ end
 
 
 
-function plotPredictionVsLabel(testingFeatures,predictedLabels,predictedVar)
+function plotPredictionVsLabel(testingFeatures,predictedLabels,predictedVar,color)
     % Plot a scatter of true values against the predictions
-    figure; hold on;
     actualLabels = 100*testingFeatures.condition;
     predictedLabels = 100*predictedLabels;
     predictedConfidenceInterval = 100*1.65*sqrt(predictedVar);
     
-    errorbar(actualLabels,predictedLabels,predictedConfidenceInterval,'x');
+    errorbar(actualLabels,predictedLabels,predictedConfidenceInterval,color);
     
     plot([0,100],[0,100],'Color',[1,1,1]/7);
     xlim([0,100]);

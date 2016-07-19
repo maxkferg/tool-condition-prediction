@@ -105,6 +105,7 @@ classdef GaussianProcess < handle
             covfunc = self.getCovFunc();   % ARD Squared exponential cov function
             likfunc = self.getLikFunc();
             infer = self.getInferenceFunc();
+
             x = self.xTrain;
             y = self.yTrain;
             hyp = minimize(self.hyp, @gp, n, infer, meanfunc, covfunc, likfunc, x, y);
@@ -176,6 +177,10 @@ classdef GaussianProcess < handle
             functionName = self.meanFunc;
             if strcmp(functionName,'MeanZero')
                 func = @meanZero;
+            elseif strcmp(functionName,'MeanConst')
+                func = {@meanConst};    
+            elseif strcmp(functionName,'MeanLinear')
+                func = {@meanSum, {@meanLinear, @meanConst}};
             else 
                 throw(['Unknown mean function ', functionName]);
             end
@@ -193,11 +198,11 @@ classdef GaussianProcess < handle
             elseif strcmp(functionName,'ARDSquaredExponentialKernel')
                 func = @covSEard; 
             elseif strcmp(functionName,'AbsoluteExponentialKernel')
-                func = @unsure;
+                func = @covSEiso;
             elseif strcmp(functionName,'GeneralizedExponentialKernel')
                 func = @unsure;
             else 
-                throw('Unknown covariance function ' + functionName);
+                throw('Unknown covariance function %s', functionName);
             end
         end
         
@@ -221,7 +226,8 @@ classdef GaussianProcess < handle
             if strcmp(functionName,'Exact')
                 func = @infExact;
             else 
-                throw(['Unsupported inference function ', functionName]);
+                fprintf('Custom inference function\n')
+                func = functionName;
             end
         end
     end

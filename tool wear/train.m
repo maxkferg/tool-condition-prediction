@@ -21,17 +21,23 @@ function model = train(trainingData,filename)
     % The hyperparameters are defined in the same way that gpml returns them
     % This make the PMML package easier to use with gpml, but requires the
     % PMML package to make conversions internally
-    sn = 0.1051;
+    sn = 0.0493;
     gamma = sqrt(1);
     lambda = ones(1,size(features,2));
     hyp.lik = log(sn);
-    hyp.mean = [];
+    hyp.mean = [0.5];
     hyp.cov = log([lambda gamma]);
 
-    meanfunc = 'MeanZero';
+    meanfunc = 'MeanConst';
     covfunc = 'ARDSquaredExponentialKernel';
     likfunc = 'Gaussian';
     inffunc = 'Exact';
+    
+    pc = {@priorClamped}; 
+    pg = {@priorGauss ,-2.5039, 0.2};
+    prior.cov = {[]; pg; pg; pg; pg; pg; pg; pg};
+    prior.mean = {[]};
+    inffunc = {@infPrior ,@infExact ,prior};
 
     % Create a GPR model
     model = pmml.GaussianProcess(hyp, inffunc, meanfunc, covfunc, likfunc, features, labels);
@@ -66,6 +72,7 @@ function plotTrainingPoints(model,features,trueLabels,dimension)
     fill([z; flipdim(z,1)], f, [7 7 7]/8)
     plot(z, m); 
     plot(z, trueLabels, '+');
+    
 end
 
 

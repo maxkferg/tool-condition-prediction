@@ -11,20 +11,16 @@ classdef ToolCondition < ToolDataset
     
         function self = ToolCondition(tool)
             self@ToolDataset(tool); 
+            time = self.vibrationTime;
             boundaries = getCutGroups(self); 
-            self.cutBoundaries = boundaries;
-            self.plotAudioEnvelope();
             partDelimeters = [self.vibrationDelimeters, length(self.vibrationTime)];
             
             for i=1:length(boundaries)-1
-                % Find the index of vibration/audio samples for this boundary
-                audioIdx = boundaries(i) < self.audioTime     & self.audioTime     < boundaries(i+1);
-                accelIdx = boundaries(i) < self.vibrationTime & self.vibrationTime < boundaries(i+1);   
-                % Find the audio and vibration time series for this boundary 
-                audio = self.audioTimeSeries(audioIdx);
-                accel = self.vibrationTimeSeries(accelIdx,:);
+                idx = boundaries(i) < time & time < boundaries(i+1);
+                audio = self.audioTimeSeries(idx);
+                accel = self.vibrationTimeSeries(idx,:);
                 % Calculate tool wear
-                currIdx = find(accelIdx,1,'first');
+                currIdx = find(idx,1,'first');
                 currPart = find(currIdx>self.vibrationDelimeters,1,'last');
                 currPartIdx = partDelimeters(currPart);
                 nextPartIdx = partDelimeters(currPart+1);
@@ -32,16 +28,16 @@ classdef ToolCondition < ToolDataset
                 toolwear = ToolWear(self.tool,currPart,progress);
                 cutAction = MachineAction(self.tool,i);
                 % fprintf('tool %i, part %i, progress %.2f\n',self.tool,currPart,progress)
-                fprintf('Tool %i, part %i, progress %.2f, wear %.2f\n',self.tool,currPart,progress,toolwear);
+                fprintf('Tool %i, part %i, progress %.2f, wear %.2f\n',self.tool,currPart,progress,toolwear)
                 cuts(i) = ToolCut(audio, accel, self.tool, currPart, toolwear, cutAction);
             end
             % Store the cut objects
             self.ToolCuts = cuts;
+            self.cutBoundaries = boundaries;
             % Count the number of air cuts
-            cutTypes = arrayfun(@(x) x.actualOperation, cuts);
-            fprintf('Tool %i has %i/%i air cuts\n',tool,sum(cutTypes==0),length(cuts));
-            fprintf('Tool %i has %i/%i conv cuts\n',tool,sum(cutTypes==1),length(cuts));
-            fprintf('Tool %i has %i/%i climb cuts\n',tool,sum(cutTypes==2),length(cuts));
+            cutTypes = arrayfun(@(x) x.expectedOperation, cuts);
+            nAirCuts = sum(cutTypes==1);
+            fprintf('Tool %i has %i/%i air cuts\n',tool,nAirCuts,length(cuts));
         end
         
         % Return an estimator for tool wear based on the number of cuts
@@ -66,7 +62,7 @@ classdef ToolCondition < ToolDataset
             env = smooth(env,1000);
             
             % Break the times series up into similiar groups
-            threshold = 0.1; % 0.1 std deviation above the mean
+            threshold = 0.3; % 0.5 std deviation above the mean
             time = self.vibrationTime;
             boundaries = thresholdIntersection(time,env,threshold);
             
@@ -77,167 +73,105 @@ classdef ToolCondition < ToolDataset
             xlabel('Time [s]')
             ylabel('Vibration Amplitude');
         end
-         
-        
-        % Plot the audio envelope, along with cut boundaries
-        function plotAudioEnvelope(self)
-            % Obtain normalized power
-            power = self.audioTimeSeries;
-            power = (power-mean(power))/std(power);
-            
-            % Downsample for performance
-            power = downsample(power,10);
-            time = downsample(self.audioTime,10);
-            outliers = abs(power) > median(abs(power))+ 2*std(abs(power));
-            
-            % Obtain smooth envelope of normalized power
-            env = envelope(power,200,'peak');
-            env = smooth(env,1000);
-            
-            figure(); hold on;
-            plot(time,env);
-            %plot(time(outliers),power(outliers),'rx');
-            vline(self.cutBoundaries);
-            title('Audio Power and Cut Boundaries');
-            xlabel('Time [s]')
-            ylabel('Audio Amplitude'); 
-            drawnow();
-        end
         
         % Plot a graph showing how the cfft change over time
         % The base frequency is subtracted from each cut
         function plotFrequencyEvolution(self)
             k = 4; % Direction
             optype = 1; % Cutting operation type
-            operation = optype;
-            toolcuts = filterBy(self.ToolCuts,'actualOperation',operation);
             
             f1 = [];
             f2 = [];
             f3 = [];
             f4 = [];
             f5 = [];
-
+            f6 = [];
+            f7 = [];
+            
+            % Find the largest frequency vector
+            nfourier = 0;
+            n = length(self.ToolCuts);
+            for i=1:n
+                if self.ToolCuts(i).actualOperation==optype
+                    npoints = length(self.ToolCuts(i).vibrationTimeSeries);
+                    nfourier = max(nfourier,npoints);
+                end
+            end
+            
             % Find the number of frequency points
-            toolcuts(1).calculateVibrationDFT()
-            m = length(toolcuts(1).fourier.freq);
-   
+            m = 0;
+            for i=1:n
+                if self.ToolCuts(i).actualOperation==optype
+                    self.ToolCuts(i).calculateDFT(nfourier)
+                    m = length(self.ToolCuts(i).fourier.freq);
+                    break;
+                end
+            end
+            
+              
             figure; hold on;
-            n = length(toolcuts);
+            n = length(self.ToolCuts);
             x = zeros(n,m);
             y = zeros(n,m);
-            j = 0;
-             
-            for i=1:length(toolcuts)
-                cut = toolcuts(i);
-                cut.calculateVibrationDFT();       
-                freq = cut.fourier.freq(k,:);
-                power = cut.fourier.power(k,:);
+            
+            for i=1:length(self.ToolCuts)
+                cut = self.ToolCuts(i);
+                if cut.actualOperation==optype
+                    i
+                    cut.calculateDFT(nfourier);       
+                    freq = cut.fourier.freq(k,:);
+                    power = cut.fourier.power(k,:);
+                    
+                    length(freq)
 
-                j = j+1;
-                x(j,:) = freq;
-                y(j,:) = sqrt(power);
-
-                % Define the current power spectrum
-                yj = y(j,:);
-
-                % Define some baseline power spectrum
-                if j==1
-                    yb = y(1,:);
-                elseif j==2
-                    yb = mean(vertcat(y(1,:),y(2,:)));
-                else 
-                    yb = mean(vertcat(y(1,:),y(2,:),y(3,:)));
+                    x(i,:) = freq;
+                    y(i,:) = sqrt(power);%normSmooth(,3);
+                
+                    %if (~isKey(bases,1))
+                    %     bases(1) = y(i,:)
+                    %     %bases(2) = y(i.2);
+                    %     %bases(3) = y(3);
+                    %     %bases(4) = y(4);
+                    % end
+                    %clf;
+                    %ylim([0,3*1000*10000])
+                    %diffc = log(y(i,:))-log(bases(1));
+                    %diffc = diffc(~isnan(diffc));
+                    %z(i) = mean(diffc.^2);
+                    
+                    a1 = y(i,:)-y(1,:);
+                    a2 = y(i,:)-y(5,:);
+                    a3 = y(i,:)-y(9,:);
+                    a4 = y(i,:);
+                    a5 = y(i,:)/mean(filtnan(y(i,:))) - y(1,:)/mean(filtnan(y(1,:)));
+                    
+                    f1(end+1) = mean(abs(filtnan(a1)));
+                    f2(end+1) = mean(abs(filtnan(a2)));
+                    f3(end+1) = mean(abs(filtnan(a3)));
+                    f4(end+1) = mean(abs(filtnan(a4)));
+                    f5(end+1) = mean(abs(filtnan(a5)));
+                    f6(end+1) = 0;
+                    f7(end+1) = max(abs(filtnan(a3)));
+                    
+                    color = [i/n,(n-i)/n,0];
+                    %%plot(x(1,:), y(1,:), 'k', 'lineWidth',2);
+                    %plot(x(i,:), y(i,:),'Color',color);
+                    plot(freq, a2,'Color',color);
+                    %plot(x(1,:), a1,'Color',color);
+                    
+                    %s = smooth(log(cut.fourier.power(2,:)),10)
+                    %plot(1:length(s), s,'Color',color);
+                    %alpha(0.2)
+                    %ylim([0,14])
+                    %plot(x,log(y(i,:)),'bo');
+                    %plot(x,y(i,:)),'Color',color);
+                    %fprintf('Drift in Vibration Frequency Content (%i)\n',cut.actualOperation)
+                    title(sprintf('Drift in Vibration Frequency Content (%i)',cut.actualOperation));
+                    xlabel('Frequency [Hz]')
+                    ylabel('Amplitude')
+                    drawnow;
+                    pause(0.1);
                 end
-
-                f1(end+1) = sum(yj-yb) / sum(yb);
-                f2(end+1) = sum(yj.^2-yb.^2) / sum(yb.^2);
-                f3(end+1) = sum(log(yj)-log(yb)) / sum(log(yb));
-                f4(end+1) = max(yj-yb) / max(yb);
-                f5(end+1) = mean(yj./yb)-1;
-
-                color = [i/n,(n-i)/n,0];
-                plot(freq, yj,'Color',color); 
-                title(sprintf('Drift in Vibration Frequency Content (%i)',cut.actualOperation));
-                xlabel('Frequency [Hz]')
-                ylabel('Amplitude')
-                drawnow;
-                pause(0.01);
-            end 
-            figure;
-            surf(freq,1:j,log(y));
-            
-            % Some features are not defined for the first few points
-            f1(1) = f1(2);
-            f2(1:2) = f2(3);
-            f3(1:3) = f3(4);
-         
-            figure(); hold on;
-            plot(1:length(f1),f1,'r')
-            plot(1:length(f2),f2,'g')
-            plot(1:length(f3),f3,'b')
-            plot(1:length(f4),f4,'k')
-            plot(1:length(f5),f5,'c')
-            title('Vibration Features f1-f5')
-            legend({'f1','f2','f3','f4','f5'})
-        end
-        
-        
-        
-        % Plot a graph showing how the cfft change over time
-        % The base frequency is subtracted from each cut
-        function plotAudioFrequencyEvolution(self)
-            f1 = [];
-            f2 = [];
-            f3 = [];
-            f4 = [];
-            f5 = [];
-            
-            operation = 1; % Cutting operation type   
-            toolcuts = filterBy(self.ToolCuts,'actualOperation',operation);
-                  
-            % Update one of the cuts so we can observe the number of points
-            cut = toolcuts(1);
-            cut.calculateAudioDFT();
-            
-            m = length(cut.audioFourier.freq);
-            n = length(toolcuts);
-            x = zeros(n,m);
-            y = zeros(n,m);
-           
-            figure; hold on;
-            for i=1:length(toolcuts)
-                cut = toolcuts(i);
-                cut.calculateAudioDFT();
-                x(i,:) = cut.audioFourier.freq;
-                y(i,:) = smooth(sqrt(cut.audioFourier.power),'lowess');
-
-                % Define the current power spectrum
-                xi = x(i,:);
-                yi = y(i,:);
-
-                % Define some baseline power spectrum
-                if i==1
-                    yb = y(1,:);
-                elseif i==2
-                    yb = mean(vertcat(y(1,:),y(2,:)));
-                else 
-                    yb = mean(vertcat(y(1,:),y(2,:),y(3,:)));
-                end
-
-                f1(end+1) = sum(yi-yb) / sum(yb);
-                f2(end+1) = sum(yi.^2-yb.^2) / sum(yb.^2);
-                f3(end+1) = sum(log(yi)-log(yb)) / sum(log(yb));
-                f4(end+1) = max(yi-yb) / max(yb);
-                f5(end+1) = mean(yi./yb)-1;
-
-                color = [i/n,(n-i)/n,0];
-                plot(xi, yi, 'Color',color); 
-                title(sprintf('Drift in Audio Frequency Content (%i)',cut.actualOperation));
-                xlabel('Frequency [Hz]')
-                ylabel('Amplitude')
-                drawnow;
-                pause(0.01);
             end 
             
             % Some features are not defined for the first few points
@@ -246,16 +180,28 @@ classdef ToolCondition < ToolDataset
             f3(1:3) = f3(4);
          
             figure(); hold on;
-            plot(1:length(f1),f1,'r')
-            plot(1:length(f2),f2,'g')
-            plot(1:length(f3),f3,'b')
-            plot(1:length(f4),f4,'k')
-            plot(1:length(f5),f5,'c')
-            title('Audio features f1-f5')
-            legend({'f1','f2','f3','f4','f5'})
+            plot(1:length(f1),f1)
+            plot(1:length(f2),f2)
+            plot(1:length(f3),f3)
+            plot(1:length(f4),f4)
+            title('Cutting operation f1-f4')
+            legend({'f1','f2','f3','energy'})
+                        
+            figure();
+            plot(1:length(f5),f5)
+            title('Cutting operation f5')
+            
+            figure();
+            plot(1:length(f6),f6)
+            title('Cutting operation f6 variance')
+            
+            figure();
+            plot(1:length(f7),f7)
+            title('Cutting operation f7 variance')
         end
         
-      
+        
+        
         % Return a matrix of fft transforms for each cut
         % Each column represents a different cut in the time series
         % Each row represents a different frequency in the time series
@@ -651,4 +597,27 @@ classdef ToolCondition < ToolDataset
             legend({'Air Cut','Climb Cut','...Cut ','Air Cut 2'})
         end
     end
+end
+
+
+function v=filtnan(x)
+% Filter out infinity and nan
+    v=x(~isnan(x) & ~isinf(x));
+end
+
+function smoothData = normSmooth(data,sd)
+% Smooth the data using a normal distribution kernel. Return a row vector
+    % @param data. The vector to be smoothed
+    % @param sd. The number of points to use as a standard deviation
+    
+    if size(data,1)<size(data,2)
+        data = transpose(data);
+    end
+     % Stack the column vectors sideways
+     n = length(data);
+     means = repmat(1:n,n,1);
+     x = transpose(means);
+     mask = normpdf(x,means,sd);
+     data = repmat(data,1,n);
+     smoothData = sum(mask.*data);
 end

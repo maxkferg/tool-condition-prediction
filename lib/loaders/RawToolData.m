@@ -36,7 +36,15 @@
             self.vibrationTimeSeries(:,1) = normalizeSignal(self.vibrationTimeSeries(:,1));
             self.vibrationTimeSeries(:,2) = normalizeSignal(self.vibrationTimeSeries(:,2));
             self.vibrationTimeSeries(:,3) = normalizeSignal(self.vibrationTimeSeries(:,3));
-                     
+                    
+            % Update the audio sample rate if needed
+            audioSample = self.vibrationSampleRate*length(self.audioTimeSeries)/length(self.vibrationTimeSeries);
+            audioSample = round(audioSample,-3);
+            if (audioSample~=self.audioSampleRate)
+                fprintf('Audio sample rate is %i Hz',audioSample)
+                self.audioSampleRate = audioSample;
+            end
+            
             % Populate other convenience properties
             self.tool = tool;
             self.partsMade = length(self.audioDelimeters);
@@ -113,7 +121,12 @@
                 filepath = sprintf('%s/%s', folder, files(i).name);
                 fprintf('Reading audio file %s\n',filepath);
                 self.convertUTF8(filepath);
-                partdata = dlmread(filepath,delimeter,2,0);
+                % Parse the data ignoring time stamps
+                fid = fopen(filepath);
+                parsed = textscan(fid,'%f','commentStyle','2016-','delimiter',delimeter,'headerLines',1);
+                partdata = parsed{1};
+                fclose(fid);
+                % Store the start point, and part data
                 self.audioDelimeters(end+1) = length(self.audioTimeSeries)+1;
                 self.audioTimeSeries = vertcat(self.audioTimeSeries, partdata);
             end
@@ -131,7 +144,11 @@
                 filepath = sprintf('%s/%s', folder, files(i).name);
                 fprintf('Reading vibration file %s\n',filepath);
                 self.convertUTF8(filepath);
-                partdata = dlmread(filepath,delimeter,2,0);
+                % Parse the data ignoring time stamps
+                fid = fopen(filepath);
+                parsed = textscan(fid,'%f %f %f','commentStyle','2016-','delimiter',delimeter,'headerLines', 1);           
+                partdata = [parsed{1} parsed{2} parsed{3}];
+                fclose(fid);
                 % Store the start point, and part data
                 self.vibrationDelimeters(end+1) = length(self.vibrationTimeSeries)+1;
                 self.vibrationTimeSeries = vertcat(self.vibrationTimeSeries, partdata);
@@ -144,10 +161,16 @@
         % When selecting times to discard, comment out the relevant discard(*) line
         
             discard = containers.Map(0,[0 0]);
+            discard(11) = [398,401,   600,604,   1800,1804];
+            discard(12) = [206,225,   572,576];
             discard(17) = [582,584];
             discard(18) = [542,546,679,690];
             discard(19) = [1116,1120];
             discard(21) = [190,192,  295,300,  420,421,  437,442,  896,900   1394,1395];
+            
+            discard(25) = [0,6,   302,326,  622,640];
+            discard(26) = [0,20,  400,426,  801,810,  1170,1185];
+            
             % Add more items here
             
             if (discard.isKey(tool))

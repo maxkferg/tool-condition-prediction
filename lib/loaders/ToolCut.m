@@ -37,6 +37,7 @@ classdef ToolCut < handle
             self.toolNum = toolNum;
             self.toolwear = toolWear;
             self.actualOperation = cutAction;
+            self.updateAudioSampleRate();
             self.audioTime = (0:length(self.audioTimeSeries)-1)/self.audioSampleRate;
             self.vibrationTime = (0:length(self.vibrationTimeSeries)-1)/self.vibrationSampleRate;
             self.calculateVibrationDFT();
@@ -109,8 +110,6 @@ classdef ToolCut < handle
            ylabel('Power')
            title('Wavelet spectrum');
         end
-
-       
         
         % Calculate the DFT for vibration
         % Welch's Method is used to reduce variance in the spectra
@@ -186,6 +185,16 @@ classdef ToolCut < handle
            
             self.audioFourier.freq = freq;
             self.audioFourier.power = power;
+        end
+        
+        function updateAudioSampleRate(self)
+            % Update the audio sample rate if needed
+            audioSample = self.vibrationSampleRate*length(self.audioTimeSeries)/length(self.vibrationTimeSeries);
+            audioSample = round(audioSample,-3);
+            if (audioSample~=self.audioSampleRate)
+                fprintf('Audio sample rate is %iHz ',audioSample)
+                self.audioSampleRate = audioSample;
+            end
         end
     end
 end

@@ -4,7 +4,6 @@ function testing()
 end
 
 function plotFeaturesForTool(tool)
-
     % Plot features against wear
     operation = 1;
     figure(); hold on;
@@ -24,17 +23,18 @@ end
 function plotFeature()
     % Plot some feature for all of the testing values
     figure; hold on;
-    tools = [17,18,19,20,21,22,23];
-    operation = 2;
+    % tools = [11,17,18,19,21,22,23,25,26]; [Good set]
+    tools = [11,17,18,19,21,22,23,25,26];
     legends = {};
+    operation = 1;
     figure; hold on;
     
     for i=1:length(tools)
         features = featurize(tools(i),operation);
         x = 100-100*features.condition;
-        y = features.frechet;
-        plot(x,y,'-x');
-        legends{i} = sprintf('Tool %i',i);
+        y = features.tpower;
+        plot(x,sm2(y),'-x');
+        legends{i} = sprintf('Tool %i',tools(i));
     end
     legend(legends);
     xlim([0,100])
@@ -51,4 +51,7 @@ function plotFeature()
     ylabel('Feature Value K^i^j');
 end
 
-
+function s=sm2(s)
+    B = 1/2*ones(2,1);
+    s = filter(B,1,s);
+end

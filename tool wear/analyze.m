@@ -18,7 +18,7 @@ function analyze(tool)
     
     % STEP 1: Print the time series
     %data = ToolCondition(tool);
-    %data.plotVibrationTimeSeries();
+    data.plotVibrationTimeSeries();
     %data.plotAudioTimeSeries();
     drawnow();
     
