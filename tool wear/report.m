@@ -8,7 +8,8 @@ function report()
     % Make the results reproducible
     %rng(42);
     possibilities = [18,19,20,21,22,23,25,26];
-    testingSet = [18,22,23];    
+    testingSet = [18,22,23]; 
+    %testingSet = [18,19,20,21,22,23,25,26];
     publishResults = table();
 
     for i=1:length(testingSet)
@@ -46,15 +47,17 @@ function report()
         end
         % Join the two operations. Smooth the results to meld operations 
         currentResults = sortrows(currentResults,{'toolNum','condition'},{'descend','descend'});
-        currentResults.predictedCondition = smooth(currentResults.predictedCondition);
-        currentResults.predictedVar = smooth(currentResults.predictedVar);
+        %currentResults.predictedCondition = smooth(currentResults.predictedCondition);
+        %currentResults.predictedVar = smooth(currentResults.predictedVar);
         publishResults = [publishResults; currentResults];
         % Plot the time series for this single instance
         plotErrorbarTimeSeries(currentResults);
         plotErrorHistogram(currentResults);
         % Smooth again
-        currentResults.predictedCondition = smooth(currentResults.predictedCondition);
-        currentResults.predictedVar = 2/3*smooth(currentResults.predictedVar);
+        currentResults.predictedCondition = smooth(currentResults.predictedCondition,0.15,'rloess');
+        currentResults.predictedVar = 2/3*smooth(currentResults.predictedVar,0.15,'rloess');
+        plotPredictedTimeSeries(currentResults);
+        drawnow();
     end
     % Plot the time series before smoothing
     plotErrorbarTimeSeries(publishResults);
@@ -75,6 +78,7 @@ function plotErrorHistogram(features)
     xlabel('$$\hat{y}^i-y^i$$','Interpreter','Latex');
     ylabel('Frequency of Occurance');
     set(gca,'fontSize',14);
+    xlim([0,100])
 end
 
 

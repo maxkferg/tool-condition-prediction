@@ -33,11 +33,12 @@ function model = train(trainingData,filename)
     likfunc = 'Gaussian';
     inffunc = 'Exact';
     
-    pc = {@priorClamped}; 
-    pg = {@priorGauss ,-2.5039, 0.2};
-    prior.cov = {[]; pg; pg; pg; pg; pg; pg; pg};
-    prior.mean = {[]};
-    inffunc = {@infPrior ,@infExact ,prior};
+    %pc = {@priorClamped}; 
+    %pg = {@priorGauss ,-2.5039, 0.2};
+    %prior.cov = {[]; pg; pg; pg; pg; pg; pg; pg};
+    %prior.mean = {[]};
+    %inffunc = {@infPrior ,@infExact ,prior};
+    inffunc = {@infExact}
 
     % Create a GPR model
     model = pmml.GaussianProcess(hyp, inffunc, meanfunc, covfunc, likfunc, features, labels);

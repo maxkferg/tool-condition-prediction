@@ -116,7 +116,7 @@ classdef ToolCut < handle
         % The frequency domain is discretized into [0,500] Hz frequency intervals
         function calculateVibrationDFT(self)       
             minfreq = 4; %Hz
-            ndirections = 4;
+            ndirections = 3;
             timeSeries = self.vibrationTimeSeries;
             
             % Precalculate frequencies to allocate
@@ -125,7 +125,7 @@ classdef ToolCut < handle
 
             % Calculate the DFT of the 3D motion
             % This is best achieved by adding in the time domain
-            timeSeries(:,4) = sqrt(sum(timeSeries.^2,2));
+            % timeSeries(:,4) = sqrt(sum(timeSeries.^2,2));
                 
             % Pad the signal with zeros and scale appropriately
             originalLength = length(timeSeries);
@@ -151,6 +151,9 @@ classdef ToolCut < handle
                 self.fourier.freq(i,:) = freq;
                 self.fourier.power(i,:) = power;
             end
+            % Calculate the fourth direction
+            self.fourier.freq(4,:) = sum(self.fourier.freq)/3;
+            self.fourier.power(4,:) = sum(self.fourier.power)/3;
         end
         
         
