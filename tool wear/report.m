@@ -5,6 +5,11 @@ function report()
     addpath('lib/helpers');
     addpath('lib/loaders');
     
+    
+    plotSharpToolWornTool()
+    drawnow()
+    pause;
+    
     % Make the results reproducible
     %rng(42);
     possibilities = [18,19,20,21,22,23,25,26];
@@ -164,3 +169,44 @@ function [condition,time] = getObservedWear(features,time)
         condition(end+1) = part.condition(end);
     end
 end
+
+
+function plotSharpToolWornTool()
+    k=4;
+    operation = 2;
+    tool = 11;%,17,18,19,21,22,23];
+    figure; hold on;
+
+    cuts = LoadCuts(tool);
+    cuts = filterBy(cuts,'actualOperation',operation);
+    sharp = cuts(1);
+    worn = cuts(end);
+    plot(sharp.fourier.freq(k,:), sharp.fourier.power(k,:),'b'); % Sharp tool
+    plot(worn.fourier.freq(k,:), worn.fourier.power(k,:),'--r'); % Worn tool
+    set(gca,'yscale','log');
+    
+    set(gca,'fontSize',14);
+    xlabel('Frequency [Hz]');
+    ylabel('Power [W/Hz]');
+    legend({'Sharp Tool','Worn Tool'});
+
+    % Plot the audio content
+    tool = 11;
+    operation = 2;
+    figure; hold on;
+
+    cuts = LoadCuts(tool);
+    cuts = filterBy(cuts,'actualOperation',operation);
+    sharp = cuts(1);
+    worn = cuts(end);
+    plot(sharp.audioFourier.freq, sharp.audioFourier.power,'b'); % Sharp tool
+    plot(worn.audioFourier.freq, worn.audioFourier.power,'--r'); % Worn tool
+    set(gca,'yscale','log');
+    
+    set(gca,'fontSize',14);
+    xlabel('Frequency [Hz]');
+    ylabel('Power [W/Hz]');
+    legend({'Sharp Tool','Worn Tool'});
+    drawnow();
+end
+

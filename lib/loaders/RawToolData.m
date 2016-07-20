@@ -64,12 +64,20 @@
     % Plotting functions
     methods (Access=public)
     
-        function plotVibrationTimeSeries(self)
+        % Plot the vibration time series.
+        % Direction is an optional parameter, that allows the direction to 
+        % be specified [1,2,3]. Otherwise all three directions will be plotted 
+        function plotVibrationTimeSeries(self,direction)
             figure();
-            plot(self.vibrationTime, self.vibrationTimeSeries);
-            title(sprintf('Vibration Time Series - Tool %i',self.tool));
+            time = self.vibrationTime;
+            accel = self.vibrationTimeSeries;
+            if (nargin>1)
+                  accel = accel(:,direction);
+            end
+            plot(time, accel);
+            %title(sprintf('Vibration Time Series - Tool %i',self.tool));
             xlabel('Time [s]');
-            ylabel('Amplitude')
+            ylabel('Acceleration [m/s]')
         end 
         
         function plotAudioTimeSeries(self)

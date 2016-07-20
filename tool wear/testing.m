@@ -22,36 +22,35 @@ end
 
 
 function plotReferencePeriodograms()
-    for k=1:4
-        operation = 2;
-        tools = [11,17,18,19,21,22,23];
-        legends = {};
-        handles = [];
-        colors = {'r','b'};
-        figure; hold on;
+    k=4;
+    operation = 2;
+    tools = [11]%,17,18,19,21,22,23];
+    legends = {};
+    handles = [];
+    colors = {'r','b'};
+    figure; hold on;
 
-        for i=1:length(tools)
-            cuts = LoadCuts(tools(i));
-            cuts = filterBy(cuts,'actualOperation',operation);
-            reference = cuts(1:5);
-            yb = zeros(1,length(reference(1).fourier.power(k,:)));
-            ab = zeros(length(reference(1).audioFourier.power),1);
-            for cut=reference
-                yb = yb + cut.fourier.power(k,:);
-                ab = ab + cut.audioFourier.power;
-                %handles(end+1) = plot(cut.fourier.freq(k,:), sqrt(yb), colors{i});
-            end
-            yb = yb/length(reference) / mean(yb);
-            ab = ab/length(reference);
-            % Plot the reference fourier spectrum
-            handles(end+1) = plot(cut.fourier.freq(k,:), sqrt(yb));
-            legends{i} = sprintf('Tool %i',i);
+    for i=1:length(tools)
+        cuts = LoadCuts(tools(i));
+        cuts = filterBy(cuts,'actualOperation',operation);
+        reference = cuts(1:5);
+        yb = zeros(1,length(reference(1).fourier.power(k,:)));
+        ab = zeros(length(reference(1).audioFourier.power),1);
+        for cut=reference
+            yb = yb + cut.fourier.power(k,:);
+            ab = ab + cut.audioFourier.power;
+            %handles(end+1) = plot(cut.fourier.freq(k,:), sqrt(yb), colors{i});
         end
-        set(gca,'fontSize',14);
-        xlabel('Frequency [Hz]');
-        ylabel('Power [W/Hz]');
-        legend(handles,legends);
+        yb = yb/length(reference) / mean(yb);
+        ab = ab/length(reference);
+        % Plot the reference fourier spectrum
+        handles(end+1) = plot(cut.fourier.freq(k,:), sqrt(yb));
+        legends{i} = sprintf('Tool %i',i);
     end
+    set(gca,'fontSize',14);
+    xlabel('Frequency [Hz]');
+    ylabel('Power [W/Hz]');
+    legend(handles,legends);
 end
 
 

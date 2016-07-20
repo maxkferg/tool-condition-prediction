@@ -16,11 +16,19 @@ function analyze(tool)
         save(cache,'data');
     end
     
+    % Filter so that only the first part is shown
+    data.ToolCuts = filterBy(data.ToolCuts,'partNum',1);
+    
     % STEP 1: Print the time series
     %data = ToolCondition(tool);
-    data.plotVibrationTimeSeries();
+    data.plotVibrationTimeSeries(1);
     %data.plotAudioTimeSeries();
     drawnow();
+
+    % STEP 2: Plot the cut classification
+    data.plotUnlabelledTimeSeries()
+    data.plotLabelledTimeSeries()
+    drawnow(); 
     
     % STEP 2: Plot the cut classification
     data.plotCutActionClassification()

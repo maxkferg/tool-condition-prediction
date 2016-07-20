@@ -256,57 +256,6 @@ classdef ToolCondition < ToolDataset
         end
         
       
-        % Return a matrix of fft transforms for each cut
-        % Each column represents a different cut in the time series
-        % Each row represents a different frequency in the time series
-        %
-        % cfft.power(i,j,k) -> ith direction, jth cut, kth frequency 
-        function cfft = getCutPowerSpectrum(self)
-            binwidth = 5; %Hz
-            ndirections = 3;
-            boundaries = self.getCutGroups();
-         
-            cfft = struct();
-            cfft.nyquist = self.vibrationSampleRate/2;      
-            cfft.frequency = 0:binwidth:cfft.nyquist;
-            cfft.power = zeros(ndirections, length(cfft.frequency), length(boundaries)-1);
-            cfft.boundaries = boundaries;
-           
-            for i=1:ndirections
-                for j=2:length(boundaries)
-                    time = self.vibrationTime;
-                    indices = boundaries(j-1) < time & time < boundaries(j);
-                    accel = self.vibrationTimeSeries(indices);
-                    
-                    % Make sure there is always more points than buckets
-                    if length(accel)<length(cfft.frequency)
-                        accel(length(accel)+1:cfft.frequency)=0;
-                    end
-                    % Make sure there is always an even number of points
-                    if mod(length(accel),2)
-                        accel = [accel 0];
-                    end
-                    
-                    % Perform fft transform
-                    n = length(accel);
-                    amplitude = fft(accel);
-                    freq = (1:n/2)/(n/2)*cfft.nyquist;
-                    
-                    % Calculate fft power spectrum
-                    minfreq = 4; %Hz
-                    power = abs(amplitude(1:floor(n/2))).^2;
-                    power(freq<minfreq) = 0;
-                    
-                    % Discretize into frequency buckets
-                    [~,idx] = histc(freq,cfft.frequency);
-                    Y = accumarray(idx(:),power,[],@mean);
-                    %figure; hold on;
-                    %plot(freq,log(power));
-                    %plot(cfft.frequency,log(Y));
-                    cfft.power(i,:,j) = log( Y/mean(Y) );
-                end
-            end 
-        end
         
         % Perform a PCA analysis on the cut frequency spectrum
         % Aim is to find k factors that describe each cut.
@@ -568,6 +517,51 @@ classdef ToolCondition < ToolDataset
         end
         
         
+        % Draw on the cut labels
+        function plotUnlabelledTimeSeries(obj)
+            time = 0;
+            color = colord(1);
+            figure(); hold on;
+            for i=1:length(obj.ToolCuts)
+                cut = obj.ToolCuts(i);
+                xtime = time + cut.vibrationTime;
+                plot(xtime, cut.vibrationTimeSeries(:,1),'color',color);
+                time = max(xtime); 
+            end
+            xlabel('Time [s]')
+            ylabel('Acceleration [m/s]');
+            lg = legend({'Raw Time Series'});
+            set(lg,'fontSize',14);
+            set(gca,'fontSize',14);
+            drawnow();
+        end
+        
+        
+        % Draw on the cut labels
+        function plotLabelledTimeSeries(obj)
+            time = 0;
+            figure(); hold on;
+            for i=1:length(obj.ToolCuts)
+                cut = obj.ToolCuts(i);
+                action = cut.actualOperation+1;
+                xa = time + cut.vibrationTime;
+                xv = time + cut.vibrationTime;
+                
+                % Vibration 1
+                signal = cut.vibrationTimeSeries(:,1);
+                plot(xv, signal, 'color', colord(action));             
+                time = max(max(xa),max(xv));          
+                drawnow();
+            end
+            xlabel('Time [s]')
+            ylabel('Acceleration [m/s]');
+            lg = legend({'Conventional Cutting','Air Cutting','Climb Cutting'})
+            set(lg,'fontSize',12);
+            set(gca,'fontSize',14);
+            drawnow();
+        end
+        
+       
         % Plot the time series, colored according to the cluster
         % Useful for improving the clustering classifier
         function plotClusteredTimeSeries(obj,classificationResult,direction)
@@ -652,3 +646,10 @@ classdef ToolCondition < ToolDataset
         end
     end
 end
+
+
+function color = colord(i)
+    ord = get(gca,'ColorOrder');
+    color = ord(i,:);
+end
+    
