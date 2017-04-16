@@ -154,8 +154,12 @@
                 self.convertUTF8(filepath);
                 % Parse the data ignoring time stamps
                 fid = fopen(filepath);
-                parsed = textscan(fid,'%f %f %f','commentStyle','2016-','delimiter',delimeter,'headerLines', 1);           
-                partdata = [parsed{1} parsed{2} parsed{3}];
+                parsed = textscan(fid,'%f %f %f','commentStyle','2016-','delimiter',delimeter,'headerLines', 1); 
+                p1 = parsed{1};
+                p2 = parsed{2};
+                p3 = parsed{3};
+                height = min([length(p1) length(p2) length(p3)]);
+                partdata = [p1(1:height) p2(1:height) p3(1:height)];
                 fclose(fid);
                 % Store the start point, and part data
                 self.vibrationDelimeters(end+1) = length(self.vibrationTimeSeries)+1;
@@ -171,7 +175,7 @@
             discard = containers.Map(0,[0 0]);
             discard(11) = [398,401,   600,604,   1800,1804];
             discard(12) = [206,225,   572,576];
-            discard(17) = [582,584];
+            discard(17) = [296,298,582,584];
             discard(18) = [542,546,679,690];
             discard(19) = [1116,1120];
             discard(21) = [190,192,  295,300,  420,421,  437,442,  896,900   1394,1395];
@@ -179,6 +183,11 @@
             discard(25) = [0,6,   302,326,  622,640];
             discard(26) = [0,20,  400,426,  801,810,  1170,1185];
             
+            discard(27) = [0,7,  308,314];
+            discard(28) = [0,8,  312,318,  622,630,  934,944];
+            discard(29) = [0,16, 320,335,  635,650,  950,975,  1277,1292,  1594,1600];
+            
+                        
             % Add more items here
             
             if (discard.isKey(tool))

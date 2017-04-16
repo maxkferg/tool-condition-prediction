@@ -120,13 +120,9 @@ classdef ToolCut < handle
             timeSeries = self.vibrationTimeSeries;
             
             % Precalculate frequencies to allocate
-            n = 1024;
+            n = 2^9;
             npoints = n/2+1;
-
-            % Calculate the DFT of the 3D motion
-            % This is best achieved by adding in the time domain
-            % timeSeries(:,4) = sqrt(sum(timeSeries.^2,2));
-                
+           
             % Pad the signal with zeros and scale appropriately
             originalLength = length(timeSeries);
             timeSeries = zeroPad(timeSeries,n);
@@ -154,6 +150,7 @@ classdef ToolCut < handle
             % Calculate the fourth direction
             self.fourier.freq(4,:) = sum(self.fourier.freq)/3;
             self.fourier.power(4,:) = sum(self.fourier.power)/3;
+            fprintf('%i points in vibration spectra',length(self.fourier.power(4,:)));
         end
         
         
@@ -162,7 +159,7 @@ classdef ToolCut < handle
         % If n is specified then the time series will be zero padded to n points
         function calculateAudioDFT(self)       
             % Precalculate frequencies to allocate
-            n = 2048;
+            n = 2^9;
             minfreq = 10; %Hz
             
             % Precalculate frequencies to allocate

@@ -194,15 +194,37 @@ classdef GaussianProcess < handle
         % function to distinguish between and mean and cov kernel
             functionName = self.covFunc;
             if strcmp(functionName,'RadialBasisKernel')
-                func = @unsure;
+                func = @covSEiso;
             elseif strcmp(functionName,'ARDSquaredExponentialKernel')
                 func = @covSEard; 
-            elseif strcmp(functionName,'AbsoluteExponentialKernel')
+            elseif strcmp(functionName,'SquaredExponentialKernel')
                 func = @covSEiso;
             elseif strcmp(functionName,'GeneralizedExponentialKernel')
                 func = @unsure;
+            elseif strcmp(functionName,'SuperKernel')
+                nVibration = 257;
+                nVibration1 = 128;
+                nVibration2 = nVibration-nVibration1;
+                
+                nAudio = 257;
+                nAudio1 = 128;
+                nAudio2 = nAudio-nAudio1;
+                
+                recursiveMask = [ones(1,1),   zeros(1,nVibration1), zeros(1,nVibration2), zeros(1,nAudio1), zeros(1,nAudio2)];
+                vibrationMask1 = [zeros(1,1), ones(1,nVibration1),  zeros(1,nVibration2), zeros(1,nAudio1), zeros(1,nAudio2)];
+                vibrationMask2 = [zeros(1,1), zeros(1,nVibration1), ones(1,nVibration2),  zeros(1,nAudio1), zeros(1,nAudio2)];
+                audioMask1 =     [zeros(1,1), zeros(1,nVibration1), zeros(1,nVibration2), ones(1,nAudio1),  zeros(1,nAudio2)];
+                audioMask2 =     [zeros(1,1), zeros(1,nVibration1), zeros(1,nVibration2), zeros(1,nAudio1), ones(1,nAudio2)];
+                % Define kernel function
+                func = {@covSum, {
+                    {@covMask, {recursiveMask,@covSEiso}},
+                    {@covMask, {vibrationMask1,@covSEiso}},
+                    {@covMask, {vibrationMask2,@covSEiso}},
+                    {@covMask, {audioMask1,@covSEiso}},
+                    {@covMask, {audioMask2,@covSEiso}},
+                }};
             else 
-                throw('Unknown covariance function %s', functionName);
+                throw(sprintf('Unknown covariance function %s', functionName));
             end
         end
         

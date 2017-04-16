@@ -1,18 +1,31 @@
 function plotRawData()
     % Plot the raw timeseries acceleration and vibration
-    toolNums = [21];%,2,3];
+    toolNums = [17];%,2,3];
     tools = loadTools(toolNums);
     for tool = tools
         %plotRawVibrationTimeSeries(tool);
         %plotRawAudioTimeSeries(tool);
         %plotNormalizedVibrationTimeSeries(tool);
-        %plotCutBoundaries(tool);
-        plotEnvelope(tool);
+        plotUnlabelledTimeSeries(tool);
+        plotLabelledTimeSeries(tool);
+        %plotEnvelope(tool);
         %plotFrequencyDomain(tool);
         %plotFourierRotationSpeed(tool);
         %plotFourierAudio(tool);
         %plotFourierEnergy(tool);
         %plotGaussianConvolution(tool);
+    end
+end
+
+function color = operationToColor(operation)
+    % Convert a machine operation to a color
+    colors = getColors();
+    if operation==1
+        color = colors.red;
+    elseif operation==2
+        color = colors.blue;
+    else
+        color = colors.green;
     end
 end
 
@@ -211,6 +224,52 @@ function plotRawVibrationTimeSeries(tool)
 end
 
 
+function plotLabelledTimeSeries(tool)
+    % Plot the raw vibration time series
+    start = 0;
+    colors = getColors();
+    figure; hold on;
+    plot(0, 0, 'color',colors.blue);
+    for cut=tool.ToolCuts(1:40)
+        time = cut.vibrationTime+start;
+        accel = cut.vibrationTimeSeries(:,1);
+        accel = accel/9.81;
+        color = operationToColor(cut.actualOperation);
+        plot(time, accel, 'color',color);
+        ylim([-0.6,0.8])
+        %xlim([0,300])
+        xlabel('Time [s]');
+        ylabel('Acceleration [g]');
+        set(gca,'FontSize',16);
+        set(gca,'YTick', -0.6:0.2:0.8);
+        start = time(end);
+    end
+    legend({'Conventional Cutting','Climb Cutting','Air Cutting'});
+end
+
+
+function plotUnlabelledTimeSeries(tool)
+    % Plot the raw vibration time series
+    figure; hold on;
+    colors = getColors();
+    time = tool.vibrationTime;
+    accel = tool.vibrationTimeSeries(:,1);
+    accel = accel/9.81;
+    % Trim to a single cut
+    time = time(1:tool.vibrationDelimeters(2));
+    accel = accel(1:tool.vibrationDelimeters(2));
+    % Plot
+    plot(time, accel, 'color',colors.blue);
+    ylim([-0.6,0.6])
+    xlim([0,300])
+    vline(tool.cutBoundaries,'color',colors.red);
+    xlabel('Time [s]');
+    ylabel('Acceleration [g]');
+    set(gca,'FontSize',16);
+    set(gca,'YTick', -0.6:0.2:0.6);
+end
+
+
 function plotRawAudioTimeSeries(tool)
     % Plot the raw vibration time series
     figure; hold on;
@@ -225,18 +284,21 @@ end
 
 function plotCutBoundaries(tool)
 % Plot the boundaries between each cut
-    power = rms(tool.vibrationTimeSeries,2);
-    env = envelope(power,100,'peak');
+    accel = tool.vibrationTimeSeries(:,1);
+    accel = accel/9.81/2; % Convert to [g]
+    env = envelope(accel,100,'peak');
+    env = smooth(env,500);
     env = smooth(env,500);
 
     figure; hold on;
     plot(tool.vibrationTime, env, 'color',accentColor(1));
+    ylim([0,0.5]);
     vline(tool.cutBoundaries,'color',accentColor(8));
-    title('Assigning Cut Boundaries');
+    title('Absolute Acceleration Envelope');
     xlabel('Time [s]')
-    ylabel('Vibration Amplitude');
+    ylabel('Absolute Acceleration [g]');
     set(gca,'FontSize',14);
-    set(gca,'YTick', 0:5);
+    set(gca,'YTick', 0:0.1:0.5);
 end
 
 
@@ -248,9 +310,9 @@ function plotEnvelope(tool)
 
     figure; hold on;
     plot(tool.vibrationTime, env, 'color',accentColor(1));
-    title('Vibration Amplitude Envelope');
+    title('Absolute Acceleration Envelope');
     xlabel('Time [s]')
-    ylabel('Vibration Amplitude');
+    ylabel('Absolute Acceleration [g]');
     xlim([0,200]);
     ylim([0,4]);
     set(gca,'FontSize',14);

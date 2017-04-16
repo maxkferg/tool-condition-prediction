@@ -17,7 +17,7 @@ function analyze(tool)
     end
     
     % Filter so that only the first part is shown
-    data.ToolCuts = filterBy(data.ToolCuts,'partNum',1);
+    %data.ToolCuts = filterBy(data.ToolCuts,'partNum',1);
     
     % STEP 1: Print the time series
     %data = ToolCondition(tool);
@@ -31,7 +31,7 @@ function analyze(tool)
     drawnow(); 
     
     % STEP 2: Plot the cut classification
-    data.plotCutActionClassification()
+    %data.plotCutActionClassification()
     drawnow();
 
     % STEP 3: Print the vibration frequency evolution

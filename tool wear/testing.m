@@ -24,7 +24,7 @@ end
 function plotReferencePeriodograms()
     k=4;
     operation = 2;
-    tools = [11]%,17,18,19,21,22,23];
+    tools = [11,17,18,19,21,22,23];
     legends = {};
     handles = [];
     colors = {'r','b'};

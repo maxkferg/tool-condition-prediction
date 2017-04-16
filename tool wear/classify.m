@@ -9,20 +9,32 @@ function classify(filename)
     %rng(42);
     possibilities = [11,17,18,19,21,22,23,25,26];
     
-    for i=3:5%length(possibilities)
+    for i=1%length(possibilities)
         % Select testing and training set
         testing = possibilities(i);
         training = setdiff(possibilities,testing);
         fprintf('Testing against tool %i\n',testing);
         
+        % For training set the predictedWear to the toolwear
+        % training.predictedWear = training.toolwear;
+        
         % Featurize the training and testing data [operation 1]
         trainingFeatures1 = featurize(training,1);
         testingFeatures1 = featurize(testing,1);
+        
+        % Add the predictedWear feature for training. Just copy the previous table row
+        trainingFeatures1.prevCondition = circshift(trainingFeatures1.condition,1);
+        trainingFeatures1.prevCondition(1) = 1;
         model1 = train(trainingFeatures1,filename);
 
+        
         % Featurize the training and testing data [operation 2]
         trainingFeatures2 = featurize(training,2);
         testingFeatures2 = featurize(testing,2);
+        
+        % Add the predictedWear feature for training. Just copy the previous table row
+        trainingFeatures2.prevCondition = circshift(trainingFeatures2.condition,1);
+        trainingFeatures2.prevCondition(1) = 1;
         model2 = train(trainingFeatures2,filename);
 
         
@@ -44,6 +56,8 @@ function classify(filename)
         X1.partNum = [];          X2.partNum = [];
         X1 = table2array(X1);     X2 = table2array(X2);
  
+        % Loop through the each feature 
+        
         % Classify the test cuts using the model
         [predictedCond1,predictedVar1] = model1.score(X1);
         [predictedCond2,predictedVar2] = model2.score(X2);

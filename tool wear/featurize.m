@@ -14,6 +14,11 @@ function features = featurize(toolnums,operation)
         
         % Featurize all of the training/testing points
         features{i} = featurizeCut(reference, cuts);
+        
+        % Add the previous condition to all cuts. 
+        % These values need to be overidden with the predicted values during testing
+        features{i}.previousCond = circshift(features{i}.condition,1);
+        features{i}.previousCond(1) = 1;
     end
     features = vertcat(features{:});
 end
@@ -71,7 +76,7 @@ function features = featurizeCut(reference,cuts)
         % Calculate the vibration features
         %rowi.coefficients = sum(sqrt(yi) - sqrt(yb)) / sum(sqrt(yb));
         rowi.power        = sum(yi-yb);
-        rowi.tpower       = sum(yi); %/ sum(yb);
+        %rowi.tpower       = sum(yi); %/ sum(yb);
         %rowi.intensity   = sum(log(yi)-log(yb)) / sum(log(yb));
         rowi.frechet      = max(yi-yb);
         rowi.relative     = mean(yi./yb);
@@ -82,11 +87,12 @@ function features = featurizeCut(reference,cuts)
         %rowi.aintensity    = sum(log(ai)-log(ab)) / sum(log(ab));
         rowi.afrechet      = max(ai-ab);
         %rowi.arelative     = mean(ai./ab);
-         
+        
         % Add the independant variable
         rowi.condition = 1-cuti.toolwear;
         rowi.toolNum = cuti.toolNum;
         rowi.partNum = cuti.partNum;
+        rowi.actualOperation = cuti.actualOperation;
         
         % Add test features
         ts = rms(cuti.vibrationTimeSeries,2);
@@ -96,7 +102,7 @@ function features = featurizeCut(reference,cuts)
         
         % Enforce that the features don't decrease
         rowi.power = max(rowi.power,0);
-        rowi.relative = max(rowi.relative,1);
+        %rowi.relative = max(rowi.relative,1);
         rowi.apower = max(rowi.apower,0);
         
         % Append these features
