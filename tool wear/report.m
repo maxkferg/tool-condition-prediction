@@ -58,9 +58,9 @@ function report()
                 features.predictedCond(j) = predictedCond;
                 features.predictedVar(j) = predictedVar;
                 % Overwrite the next row with the predicted condition
-                if j<height(features)
-                    X.previousCond(j+1) = predictedCond;
-                end
+                %if j<height(features)
+                %    X.previousCond(j+1) = predictedCond;
+                %end
             end
             % Combine the results with the other operations
             currentResults = [currentResults; features];
@@ -81,7 +81,7 @@ function report()
         
         % Two point moving average
         currentResults.predictedCond = smooth(smooth2(currentResults.predictedCond),10);
-        currentResults.predictedVar = smooth((9^2)*smooth2(currentResults.predictedVar),10);
+        currentResults.predictedVar = smooth(smooth2(currentResults.predictedVar),10);
         
         % Append results to set
         publishResults = [publishResults; currentResults];
@@ -363,7 +363,7 @@ function ts=smooth2(ts)
     tss = 1/2*(ts1+ts2);
     tss = tss(1:(end-1));
     % Average in some noise
-    noise = 0.2;
+    noise = 0.4;
     ts = (1-noise)*tss + noise*ts;
 end
 

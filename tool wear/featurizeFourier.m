@@ -17,12 +17,9 @@ function features = featurizeFourier(toolnums,operation)
         
         % Add the previous condition to all cuts. 
         % These values need to be overidden with the predicted values during testing
-<<<<<<< HEAD
-        % features{i}.previousCond = ones(height(features{i}),1);
-=======
->>>>>>> origin/master
-        features{i}.previousCond = circshift(features{i}.condition,1);
-        features{i}.previousCond(1) = 1;
+        features{i}.previousCond = ones(height(features{i}),1);
+        %features{i}.previousCond = circshift(features{i}.condition,1);
+        %features{i}.previousCond(1) = 1;
     end
     features = vertcat(features{:});
 end
